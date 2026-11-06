@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Smart Gist Extractor</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..900&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4edea3", "background": "#0b1326", "surface-container": "#171f33",
+                        "surface-container-low": "#131b2e", "surface-container-lowest": "#060e20",
+                        "on-surface": "#dae2fd", "on-surface-variant": "#bbcabf", "on-primary": "#003824",
+                        "secondary": "#4cd7f6", "outline-variant": "#3c4a42", "surface-container-high": "#222a3d",
+                        "surface-variant": "#2d3449", "surface-container-highest": "#2d3449"
+                    },
+                    fontFamily: { "body-md": ["Inter"], "headline-md": ["Inter"], "label-sm": ["JetBrains Mono"] }
+                }
+            }
+        }
+    </script>
+    <style> 
+        body { margin: 0; padding: 0; background-color: #0b1326; } 
+        ::-webkit-scrollbar { display: none; } 
+    </style>
+</head>
+
+<body class="font-body-md text-on-surface min-h-screen flex flex-col items-center py-12 px-6">
+    
+    <div class="w-full max-w-[700px] flex flex-col">
+        
+        <!-- Header -->
+        <header class="w-full flex items-center justify-between pb-8">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[24px] text-primary">auto_awesome</span>
+                <div class="flex flex-col">
+                    <span class="font-headline-md text-[20px] font-semibold text-on-surface">Smart Gist</span>
+                    <span class="font-label-sm text-[12px] text-on-surface-variant">Instant NLP Extractor</span>
+                </div>
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container border border-outline-variant/30 text-primary font-label-sm text-[12px]">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                <span>Ready</span>
+            </div>
+        </header>
+
+        <main class="w-full flex flex-col gap-6">
+            
+            <!-- INPUT CARD -->
+            <section class="w-full bg-surface-container rounded-xl p-6 shadow-2xl flex flex-col gap-5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="font-label-sm text-[12px] uppercase text-on-surface-variant font-medium">Source Text</span>
+                        <span class="text-on-surface-variant/40 text-[12px]">•</span>
+                        <span id="char-word-meta" class="font-label-sm text-[12px] text-on-surface-variant/70">0 words</span>
+                    </div>
+                    <button class="text-on-surface-variant hover:text-on-surface text-[12px] flex items-center gap-1 transition-colors" onclick="clearText()">
+                        <span class="material-symbols-outlined text-[14px]">close</span> Clear
+                    </button>
+                </div>
+                
+                <div class="relative w-full rounded-xl bg-surface-container-lowest p-4">
+                    <textarea id="raw-text" oninput="updateCounts()" class="w-full bg-transparent text-on-surface placeholder:text-on-surface-variant/40 text-[15px] resize-none outline-none leading-relaxed" rows="6" placeholder="Paste a paragraph here...">Artificial intelligence is transforming the way modern society operates, fundamentally altering industries from healthcare to finance. By leveraging vast amounts of data, machine learning algorithms can now identify patterns that are invisible to the human eye, leading to breakthroughs in disease diagnosis and personalized medicine. In the business sector, AI-driven automation is streamlining supply chains, reducing operational costs, and enhancing customer service through sophisticated chatbots. However, this rapid advancement brings significant ethical challenges, including concerns about data privacy, algorithmic bias, and the potential displacement of human workers. Policymakers and tech leaders are currently grappling with how to regulate these powerful systems to ensure they are developed and deployed responsibly. The future of artificial intelligence will depend heavily on our ability to balance innovation with robust ethical safeguards.</textarea>
+                    
+                    <div class="flex justify-between items-center pt-2 mt-2">
+                        <span class="font-label-sm text-[11px] text-outline-variant">Autodetect: English</span>
+                        <button class="font-label-sm text-[11px] text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1" onclick="pasteClipboard()">
+                            <span class="material-symbols-outlined text-[13px]">content_paste</span>
+                            <span>Paste new</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button id="extract-btn" onclick="extractText()" class="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-lg bg-primary hover:bg-[#6ffbbe] text-on-primary text-[18px] font-semibold shadow-lg transition-all active:scale-[0.99] group">
+                    <span class="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">neurology</span>
+                    <span id="btn-text">Extract Topic & Gist</span>
+                </button>
+                
+                <div class="flex items-center justify-center gap-3 pt-1">
+                    <div class="flex items-center gap-1 text-on-surface-variant/60 font-label-sm text-[11px]">
+                        <kbd class="px-1.5 py-0.5 rounded bg-surface-container-lowest text-on-surface-variant">⌘</kbd>
+                        <kbd class="px-1.5 py-0.5 rounded bg-surface-container-lowest text-on-surface-variant">Enter</kbd>
+                        <span class="ml-1">to synthesize</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RESULTS CARD -->
+            <section class="w-full bg-surface-container rounded-xl p-6 shadow-2xl relative flex flex-col gap-6">
+                <div class="flex items-center justify-between flex-wrap gap-y-2">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-label-sm text-[12px]">
+                        <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                        <span class="font-semibold tracking-wide uppercase">Extraction Complete</span>
+                    </div>
+                    <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-sm text-[12px] transition-all" onclick="copyToClipboard('all')">
+                        <span class="material-symbols-outlined text-[16px] text-secondary">content_copy</span>
+                        <span>Copy All</span>
+                    </button>
+                </div>
+
+                <div class="flex flex-col gap-4">
+                    
+                    <!-- Topic Result -->
+                    <div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-1 group">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-secondary text-[16px]">tag</span>
+                                <span class="font-label-sm text-[11px] uppercase text-secondary font-semibold">Main Topic</span>
+                            </div>
+                            <button class="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity" onclick="copyToClipboard('topic')">
+                                <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                            </button>
+                        </div>
+                        <!-- Added break-words here to handle long topics -->
+                        <h2 id="main-topic" class="text-[28px] font-bold text-on-surface tracking-tight mt-1 break-words">Waiting for input...</h2>
+                    </div>
+
+                    <!-- Gist Result -->
+                    <div class="bg-surface-container-low rounded-lg p-4 flex flex-col gap-2 group">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-primary text-[16px]">format_align_left</span>
+                                <span class="font-label-sm text-[11px] uppercase text-primary font-semibold">Extractive Gist</span>
+                            </div>
+                            <button class="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity" onclick="copyToClipboard('gist')">
+                                <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                            </button>
+                        </div>
+                        <p id="gist-text" class="text-[15px] text-on-surface-variant leading-relaxed">
+                            The generated summary will appear here after you click extract.
+                        </p>
+                    </div>
+
+                </div>
+                
+                <!-- Bottom Actions -->
+                <div class="flex items-center justify-between pt-4 border-t border-outline-variant/20 flex-wrap gap-2">
+                    <button class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-high hover:bg-surface-variant text-on-surface font-label-sm text-[12px] transition-colors" onclick="shareResult()">
+                        <span class="material-symbols-outlined text-[15px]">share</span>
+                        <span>Share</span>
+                    </button>
+                    <button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary font-label-sm text-[12px] transition-colors" onclick="extractText()">
+                        <span class="material-symbols-outlined text-[15px] hover:rotate-180 transition-transform duration-500">replay</span>
+                        <span>Re-run Analysis</span>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="fixed bottom-6 right-6 z-50 transform translate-y-12 opacity-0 pointer-events-none transition-all duration-200 flex items-center gap-2 bg-surface-container-highest px-4 py-2.5 rounded-lg shadow-2xl text-on-surface font-body-sm text-[13px]" id="toast">
+        <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+        <span id="toast-message">Copied to clipboard</span>
+    </div>
+
+    <script>
+        // Update Word Count
+        function updateCounts() {
+            const text = document.getElementById("raw-text").value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            document.getElementById("char-word-meta").innerText = `${words} words`;
+        }
+        updateCounts(); // Run on load
+
+        // Clear Button
+        function clearText() {
+            document.getElementById("raw-text").value = "";
+            document.getElementById("main-topic").innerText = "Waiting for input...";
+            document.getElementById("gist-text").innerText = "The generated summary will appear here after you click extract.";
+            updateCounts();
+            showToast('Source cleared');
+        }
+
+        // Paste Button
+        async function pasteClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById("raw-text").value = text;
+                updateCounts();
+                showToast('Pasted from clipboard');
+            } catch(err) {
+                showToast('Clipboard access denied');
+            }
+        }
+
+        // Main Backend Connection
+        async function extractText() {
+            const text = document.getElementById("raw-text").value;
+            const btn = document.getElementById("extract-btn");
+            const btnText = document.getElementById("btn-text");
+            
+            if (text.trim().length === 0) {
+                showToast("Please enter some text first.");
+                return;
+            }
+
+            // Loading State
+            btn.disabled = true;
+            btnText.innerText = "Analyzing...";
+            document.getElementById("main-topic").innerText = "...";
+            document.getElementById("gist-text").innerText = "Processing text...";
+            
+            try {
+                const response = await fetch('/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById("main-topic").innerText = "Error";
+                    document.getElementById("gist-text").innerText = data.error;
+                    showToast(data.error);
+                } else {
+                    document.getElementById("main-topic").innerText = data.topic;
+                    document.getElementById("gist-text").innerText = data.gist;
+                }
+            } catch (error) {
+                document.getElementById("gist-text").innerText = "Server error. Is app.py running?";
+                showToast("Server error");
+            } finally {
+                // Reset Button
+                btn.disabled = false;
+                btnText.innerText = "Extract Topic & Gist";
+            }
+        }
+
+        // Copy Logic
+        function copyToClipboard(mode) {
+            const topic = document.getElementById("main-topic").innerText.trim();
+            const gist = document.getElementById("gist-text").innerText.trim();
+            let textToCopy = "";
+
+            if (topic === "Waiting for input..." || topic === "...") {
+                showToast("Nothing to copy yet!");
+                return;
+            }
+
+            if (mode === 'topic') {
+                textToCopy = topic;
+                showToast('Topic copied');
+            } else if (mode === 'gist') {
+                textToCopy = gist;
+                showToast('Gist copied');
+            } else {
+                textToCopy = `MAIN TOPIC:\n${topic}\n\nEXTRACTIVE GIST:\n${gist}`;
+                showToast('Topic & Gist copied');
+            }
+
+            navigator.clipboard.writeText(textToCopy);
+        }
+
+        // Share Logic
+        function shareResult() {
+            const topic = document.getElementById("main-topic").innerText.trim();
+            const gist = document.getElementById("gist-text").innerText.trim();
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Smart Gist Extraction',
+                    text: `Topic: ${topic}\n\nGist: ${gist}`
+                }).catch(() => {});
+            } else {
+                copyToClipboard('all');
+                showToast('Share not supported, copied to clipboard instead!');
+            }
+        }
+
+        // Toast Notification
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            document.getElementById("toast-message").innerText = msg;
+            toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 2200);
+        }
+
+        // Keyboard Shortcut (Cmd/Ctrl + Enter)
+        document.addEventListener('keydown', function(e) {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                extractText();
+            }
+        });
+    </script>
+</body>
+</html>
